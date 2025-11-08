@@ -1,9 +1,10 @@
 from fastapi import FastAPI
-import requests, time
+import requests, time, os
 
 app = FastAPI()
 
-TARGET_URL = "https://www.uni-stuttgart.de/"
+# load URL from enviroment variable
+TARGET_URL = os.getenv("TARGET_URL", "https://example.com")
 
 @app.get("/")
 def check_availability():
