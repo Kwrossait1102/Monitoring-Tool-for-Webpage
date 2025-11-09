@@ -35,7 +35,7 @@ TARGET_URL = os.getenv("TARGET_URL", "https://example.com")
 _stats_lock = Lock()
 _total_checks = 0
 _ok_checks = 0
-
+_consecutive_failures = 0
 
 # ------------------------------------------------------------
 # Helper functions
@@ -47,6 +47,9 @@ def _record(ok: bool):
         _total_checks += 1
         if ok:
             _ok_checks += 1
+            _consecutive_failures = 0
+        else:
+            _consecutive_failures +=1
 
 
 def _availability_pct():
@@ -65,9 +68,19 @@ def check_availability():
     """Perform a single availability check and store the result."""
     start = time.time()
     ts = datetime.now(timezone.utc)  # timezone-aware UTC timestamp
+
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        r = requests.get(TARGET_URL, timeout=5, headers=headers)
+
+        ttfb_start = time.time()
+        r = requests.get(TARGET_URL, timeout=5, headers=headers, stream=True)
+
+        first_byte = next(r.iter_content(1), None)
+        ttfb_ms = round((time.time() - ttfb_start) * 1000, 2)
+
+        content = first_byte + r.content if first_byte else r.content
+        response_size_bytes = len(content)
+
         latency = round((time.time() - start) * 1000, 2)
         ok = bool(r.ok)
 
@@ -79,6 +92,9 @@ def check_availability():
             "status_code": r.status_code,
             "available": ok,
             "latency_ms": latency,
+            "ttfb_ms":ttfb_ms,
+            "response_size_bytes": response_size_bytes,
+            "consecutive_failures": _consecutive_failures,
             "availability_pct_since_start": _availability_pct(),
         }
 
@@ -92,6 +108,7 @@ def check_availability():
             "available": False,
             "error": str(e),
             "latency_ms": latency,
+            "consecutive_failures": _consecutive_failures,
             "availability_pct_since_start": _availability_pct(),
         }
 
@@ -109,9 +126,11 @@ def stats():
     with _stats_lock:
         total = _total_checks
         ok = _ok_checks
+        failures = _consecutive_failures
     return {
         "target_url": TARGET_URL,
         "total_checks": total,
         "ok_checks": ok,
         "availability_pct": round(ok / total * 100, 2) if total else None,
+        "consecutive_failures": failures,
     }

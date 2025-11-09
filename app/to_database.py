@@ -26,6 +26,9 @@ class CheckRecord(Base):
     status_code: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     ok: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     latency_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    ttfb_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    response_size_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    consecutive_failures: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
     error: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
 
     # prevent duplicate (url, ts)
@@ -43,6 +46,9 @@ def add_record(
     ok: bool,
     latency_ms: Optional[float],
     error: Optional[str],
+    ttfb_ms: Optional[float] = None,  
+    response_size_bytes: Optional[int] = None,  
+    consecutive_failures: Optional[int] = None,
 ) -> None:
     with SessionLocal() as session:
         rec = CheckRecord(
@@ -67,6 +73,9 @@ def get_last_records(limit: int = 100) -> List[Dict[str, Any]]:
                 "status_code": r.status_code,
                 "ok": r.ok,
                 "latency_ms": r.latency_ms,
+                "ttfb_ms": r.ttfb_ms, 
+                "response_size_bytes": r.response_size_bytes, 
+                "consecutive_failures": r.consecutive_failures,
                 "error": r.error or "",
             }
             for r in rows
