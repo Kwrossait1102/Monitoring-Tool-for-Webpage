@@ -20,7 +20,7 @@ It automatically performs a check every **60 seconds**, calculates uptime statis
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Kwrossait1102/-Monitoring-Tool-for-Webpage.git
+git clone https://github.com/Kwrossait1102/Monitoring-Tool-for-Webpage.git
 cd your-repo-name
 ```
 
