@@ -26,8 +26,8 @@ cd your-repo-name
 
 ### 2. Install dependencies
 
-Before installing dependencies, you should have already installed **Python 3.10+** on your device.  
-To install all required packages, run the following command:
+Before installing dependencies, you should have already installed **Python 3.10+** and **PostgreSQL** on your device.  
+To install all required packages, run the following command in the **root directory of the project**:
 
 ```bash
 pip install -r requirements.txt
@@ -41,7 +41,7 @@ Edit the `.env` file in the project root directory:
 # Target webpage for monitoring
 TARGET_URL=https://www.uni-stuttgart.de
 
-# PostgreSQL connection string
+# PostgreSQL connection string, change **password** to your own password
 DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/monitor
 
 # Optional debug flag
