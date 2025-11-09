@@ -39,7 +39,7 @@ Edit the `.env` file in the project root directory:
 TARGET_URL=https://www.uni-stuttgart.de
 
 # PostgreSQL connection string
-DATABASE_URL=postgresql+psycopg://postgres:123456@localhost:5432/monitor
+DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/monitor
 
 # Optional debug flag
 DEBUG=True
