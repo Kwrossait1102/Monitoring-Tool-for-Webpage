@@ -36,8 +36,10 @@ TARGET_URL = os.getenv("TARGET_URL", "https://example.com")
 # Update automatically every 60s
 CHECK_INTERVAL = 60
 
-# Thread-safe counters for availability statistics
+# Thread-safe counters for availability statistics and database operations
 _stats_lock = Lock()
+_db_lock = Lock()
+
 _total_checks = 0
 _ok_checks = 0
 _consecutive_failures = 0
@@ -65,17 +67,17 @@ def _availability_pct():
         return round(_ok_checks / _total_checks * 100, 2)
 
 def background_checker():
-    """Check automatically in background"""
+    """Check automatically in background."""
     while True:
-        check_availability()
+        _run_check(source="auto")
         time.sleep(CHECK_INTERVAL)
 
 
 # ------------------------------------------------------------
 # Application routes
 # ------------------------------------------------------------
-@app.get("/")
-def check_availability():
+
+def _run_check(source: str):
     """Perform a single availability check and store the result."""
     start = time.time()
     ts = datetime.now(timezone.utc)  # timezone-aware UTC timestamp
@@ -96,16 +98,20 @@ def check_availability():
         ok = bool(r.ok)
 
         _record(ok)
-        add_record(ts=ts,
-                   url=TARGET_URL,
-                   status_code=r.status_code,
-                   ok=ok,
-                   latency_ms=latency,
-                   error="",
-                   ttfb_ms=ttfb_ms,
-                   response_size_bytes=response_size_bytes,
-                   consecutive_failures=_consecutive_failures,
-                   )
+
+        with _db_lock:
+            add_record(
+                ts=ts,
+                url=TARGET_URL,
+                status_code=r.status_code,
+                ok=ok,
+                latency_ms=latency,
+                error="",
+                ttfb_ms=ttfb_ms,
+                response_size_bytes=response_size_bytes,
+                consecutive_failures=_consecutive_failures,
+                source=source
+            )
 
         return {
             "url": TARGET_URL,
@@ -116,12 +122,26 @@ def check_availability():
             "response_size_bytes": response_size_bytes,
             "consecutive_failures": _consecutive_failures,
             "availability_pct_since_start": _availability_pct(),
+            "source":source
         }
 
     except Exception as e:
         latency = round((time.time() - start) * 1000, 2)
         _record(False)
-        add_record(ts, TARGET_URL, None, False, latency, str(e))
+
+        with _db_lock:
+            add_record(
+                ts=ts,
+                url=TARGET_URL,
+                status_code=None,
+                ok=False,
+                latency_ms=latency,
+                error=str(e),
+                ttfb_ms=None,
+                response_size_bytes=None,
+                consecutive_failures=_consecutive_failures,
+                source=source,
+            )
 
         return {
             "url": TARGET_URL,
@@ -132,8 +152,13 @@ def check_availability():
             "response_size_bytes":None,
             "consecutive_failures": _consecutive_failures,
             "availability_pct_since_start": _availability_pct(),
+            "source":source
         }
 
+
+@app.get("/")
+def check_manual():
+    return _run_check(source="manual")
 
 @app.get("/records")
 def records(limit: int = Query(100, ge=1, le=1000)):

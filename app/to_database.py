@@ -28,6 +28,7 @@ class CheckRecord(Base):
     ttfb_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     response_size_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     consecutive_failures: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
+    source:Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     error: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
 
     # prevent duplicate (url, ts)
@@ -43,6 +44,7 @@ def add_record(
     url: str,
     status_code: Optional[int],
     ok: bool,
+    source: str,
     latency_ms: Optional[float],
     error: Optional[str],
     ttfb_ms: Optional[float] = None,  
@@ -59,6 +61,7 @@ def add_record(
             ttfb_ms=ttfb_ms,                       
             response_size_bytes=response_size_bytes,  
             consecutive_failures=consecutive_failures or 0,
+            source=source,
             error=error or None,
         )
         session.add(rec)
@@ -78,6 +81,7 @@ def get_last_records(limit: int = 100) -> List[Dict[str, Any]]:
                 "ttfb_ms": r.ttfb_ms, 
                 "response_size_bytes": r.response_size_bytes, 
                 "consecutive_failures": r.consecutive_failures,
+                "sourde": r.source,
                 "error": r.error or "",
             }
             for r in rows
